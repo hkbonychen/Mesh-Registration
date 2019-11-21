@@ -2,6 +2,7 @@ from .correspond import correspond_mesh
 from menpo.shape import PointCloud, TriMesh
 import numpy as np
 from core.io import import_mesh, getTriMeshfromPly, ply_from_array
+import time
 
 # We define a template that we use for the landmarks
 LANDMARK_MASK = np.ones(68, dtype=np.bool)
@@ -14,7 +15,7 @@ def landmark_and_correspond_mesh(template, mesh, verbose=False, landmark_type='i
     # Don't touch the original mesh
     mesh = mesh.copy()
     mask = None
-    template.landmarks['__lsfm'] = template.landmarks['ibug68'].lms.from_mask(LANDMARK_MASK)
+    template.landmarks['__lsfm'] = template.landmarks['ibug68'].from_mask(LANDMARK_MASK)
     return_dict = {
         'shape_nicp': correspond_mesh(template, mesh, mask=mask,
                                       verbose=verbose,

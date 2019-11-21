@@ -13,9 +13,13 @@ class paramList:
           'high': lambda LOD: np.array([5, 2, 0.5, 0, 0])
         }[LOD](LOD)
         self.alignment = np.array([1000.0, -35.0, 1000.0, 57.0, 1000.0, 430.0])
-        self.landmark_type = '__lsfm'
+        self.landmark_type = 'ibug68'
         self.template_ply = './template/template0.ply'
         self.template_ibug100 = './template/ibug100.pp'
         self.template_nosetip = './template/nosetip.pp'
-        self.mode = "auto"
-        self.ordering_method = "default"
+        self.landmark_vid = './template/vid.txt'
+        self.mode = "supernodal"
+        self.ordering_method = "colamd"
+        self.profile_time = False
+
+

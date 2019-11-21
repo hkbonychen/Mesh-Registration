@@ -17,7 +17,7 @@ def generate_data_weights(template, nosetip, r_mid=1.05, r_width=0.3,
     r_min = r_mid - (r_width / 2)
     r_max = r_mid + (r_width / 2)
     w_range = w_inner - w_outer
-    x = np.sqrt(np.sum((template.points - nosetip.lms.points) ** 2 *
+    x = np.sqrt(np.sum((template.points - nosetip.points) ** 2 *
                        np.array([1, y_pen, 1]), axis=1))
     return ((1 - smootherstep(x, r_min, r_max))[:, None] * w_range + w_outer).T
 
@@ -68,5 +68,6 @@ def correspond_mesh(template, mesh, mask=None, verbose=False, landmark_type = 'i
     landmark_weights = param.landmark_weights
     aligned = non_rigid_icp(template, mesh, landmark_group=group, eps=5e-3,
                             stiffness_weights = stiffness_weights, landmark_weights = landmark_weights,
-                            data_weights=data_weights(template, LOD = LOD), verbose=verbose)
+                            data_weights=data_weights(template, LOD = LOD), 
+                            verbose=verbose, profile_time=param.profile_time)
     return aligned

@@ -173,7 +173,7 @@ def getTriMeshfromPly(path):
 	
 #function to write vertices vector into ply format, landmark points into pp file format (to be read by meshlab)
 #written by Bony on 11-7-2019
-def ply_from_array(filename, mesh, with_landmark, landmark_group, alignment=[ 1, 0, 1, 0, 1, 0 ]):
+def ply_from_array(filename, mesh, with_landmark, landmark_group, alignment=[ 1, 0, 1, 0, 1, 0 ], vid=None):
     points = mesh.points
     #colours = mesh.colours
     faces = mesh.trilist
@@ -220,16 +220,31 @@ end_header\n'''.format(mesh.n_points, mesh.n_tris)
             f.write(' ')
             f.write('\n')
 
-        if with_landmark:
+        if with_landmark and vid is None:        
             header = '<!DOCTYPE PickedPoints> \n<PickedPoints> \n <DocumentData> \n  <DataFileName name="' + filename_ply + '"/> \n  <templateName name=""/> \n </DocumentData>\n'
-            landmarks = mesh.landmarks[landmark_group].lms.points
+            landmarks = mesh.landmarks[landmark_group].points
             count = 0
             with open(filename_lm, 'w') as f:
                 f.write(header)
                 for points in landmarks:
                     count = count + 1
-                    f.write('\t<point x="' + str(points[0]) + '" y="' + str(points[1]) + '" z="' + str(points[2]) + '" name="' + str(
-                        count) + '" active="1"/>\n')
+                    f.write('\t<point x="' + str((points[0] - alignment[1]) * alignment[0])
+				+ '" y="' + str((points[1] - alignment[3]) * alignment[2])
+				+ '" z="' + str((points[2] - alignment[5]) * alignment[4]) 
+				+ '" name="' + str(count) + '" active="1"/>\n')
+                f.write('</PickedPoints>')
+
+        if with_landmark and vid is not None:
+            header = '<!DOCTYPE PickedPoints> \n<PickedPoints> \n <DocumentData> \n  <DataFileName name="' + filename_ply + '"/> \n  <templateName name=""/> \n </DocumentData>\n'        
+            count = 0
+            with open(filename_lm, 'w') as f:
+                f.write(header)
+                for vertex_id in vid:
+                    count = count + 1
+                    f.write('\t<point x="' + str((vertice_list[vertex_id][0] - alignment[1]) * alignment[0])
+				+ '" y="' + str((vertice_list[vertex_id][1] - alignment[3]) * alignment[2])
+				+ '" z="' + str((vertice_list[vertex_id][2] - alignment[5]) * alignment[4]) 
+				+ '" name="' + str(count) + '" active="1"/>\n')
                 f.write('</PickedPoints>')
 
 def importer_for_filepath(filepath, extensions_map):

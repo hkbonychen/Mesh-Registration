@@ -63,9 +63,15 @@ def load_lanmarks_from_mesh(mesh):
     mesh.landmarks['ibug100'] = PointCloud(np.array(landmark_100))
     mesh.landmarks['ibugEar'] = PointCloud(np.array(landmark_ear))
     mesh.landmarks['nosetip'] = PointCloud(np.array(nosetip))
-    mesh.landmarks['__lsfm'] = mesh.landmarks['ibug68'].lms.from_mask(
+    mesh.landmarks['__lsfm'] = mesh.landmarks['ibug68'].from_mask(
         LANDMARK_MASK)
-    return prepare_template_reference_space(mesh)
+
+    vid = []
+    with open(param.landmark_vid) as vid_file:
+        vid_file = csv.reader(vid_file, delimiter=' ')
+        for row in vid_file:
+            vid.append(int(row[0]))    
+    return prepare_template_reference_space(mesh), vid
 
 def mesh_polish(mesh, lm_filename, landmark_type='ibug68'):
     rescaled_mesh = mesh

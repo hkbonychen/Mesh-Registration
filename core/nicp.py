@@ -11,6 +11,7 @@ import os
 import sys
 from contextlib import contextmanager
 import warnings
+import time
 
 @contextmanager
 def stdout_redirected(to=os.devnull):
@@ -40,6 +41,7 @@ def stdout_redirected(to=os.devnull):
             # restore stdout.
             # buffering and flags such as CLOEXEC may be different
             redirect_stdout(to=old_stdout)
+
 try:
 
     try:
@@ -57,6 +59,7 @@ try:
         param = paramList()
         with stdout_redirected():
             factor = cholesky_AAt(sparse_X.T, mode=param.mode, ordering_method=param.ordering_method, use_long=None)
+            #factor = cholesky_AAt(sparse_X.T, mode=param.mode)
         return factor(sparse_X.T.dot(dense_b)).toarray()
 
 except ImportError:
@@ -67,6 +70,7 @@ except ImportError:
         warnings.warn("using scipy solver to solve")
         return scipy_spsolve(sparse_X.T.dot(sparse_X),
                              sparse_X.T.dot(dense_b)).toarray()
+
 
 def node_arc_incidence_matrix(source):
     unique_edge_pairs = source.unique_edge_indices()
@@ -110,11 +114,12 @@ def validate_weights(label, weights, n_points, n_iterations=None,
 def non_rigid_icp(source, target, eps=1e-3, landmark_group=None,
                   stiffness_weights=None, data_weights=None,
                   landmark_weights=None, generate_instances=False,
-                  verbose=False):
+                  verbose=False, profile_time=False):
     # call the generator version of NICP, always returning a generator
     generator = non_rigid_icp_generator(source, target, eps=eps,
                                         stiffness_weights=stiffness_weights,
                                         verbose=verbose,
+                                        profile_time=profile_time,
                                         landmark_group=landmark_group,
                                         landmark_weights=landmark_weights,
                                         data_weights=data_weights)
@@ -199,19 +204,21 @@ def non_rigid_icp_generator_handler(generator, generate_instances):
 def non_rigid_icp_generator(source, target, eps=1e-3,
                             stiffness_weights=None, data_weights=None,
                             landmark_group=None, landmark_weights=None,
-                            v_i_update_func=None, verbose=False):
+                            v_i_update_func=None, verbose=False, profile_time=False):
     r"""
     Deforms the source trimesh to align with to optimally the target.
     """
     # If landmarks are provided, we should always start with a simple
     # AlignmentSimilarity between the landmarks to initialize optimally.
+    if profile_time:
+         align_start = time.time()
     if landmark_group is not None:
         if verbose:
             print("'{}' landmarks will be used as "
                   "a landmark constraint.".format(landmark_group))
-            print("performing similarity alignment using landmarks")
-        lm_align = AlignmentSimilarity(source.landmarks[landmark_group].lms,
-                                       target.landmarks[landmark_group].lms).as_non_alignment()
+            print("performing similarity alignment using landmarks")        
+        lm_align = AlignmentSimilarity(source.landmarks[landmark_group],
+                                       target.landmarks[landmark_group]).as_non_alignment()        
         source = lm_align.apply(source)
 
     # Scale factors completely change the behavior of the algorithm - always
@@ -232,6 +239,8 @@ def non_rigid_icp_generator(source, target, eps=1e-3,
 
     # store how to undo the similarity transform
     restore = prepare.pseudoinverse()
+    if profile_time:
+        print("alignment elapsed time: " + str(time.time()-align_start))
 
     n_dims = source.n_dims
     # Homogeneous dimension (1 extra for translation effects)
@@ -326,8 +335,8 @@ def non_rigid_icp_generator(source, target, eps=1e-3,
 
     if landmark_group is not None:
         source_lm_index = source.distance_to(
-            source.landmarks[landmark_group].lms).argmin(axis=0)
-        target_lms = target.landmarks[landmark_group].lms
+            source.landmarks[landmark_group]).argmin(axis=0)
+        target_lms = target.landmarks[landmark_group]
         U_L = target_lms.points
         n_landmarks = target_lms.n_points
         lm_mask = np.in1d(row, source_lm_index)
@@ -366,7 +375,8 @@ def non_rigid_icp_generator(source, target, eps=1e-3,
         j = 0
         while True:  # iterate until convergence
             j += 1  # track the iterations for this alpha/landmark weight
-
+            if profile_time:
+                cloest_point_start = time.time()
             # find nearest neighbour and the normals
             U, tri_indices = closest_points_on_target(v_i)
 
@@ -438,7 +448,14 @@ def non_rigid_icp_generator(source, target, eps=1e-3,
 
             A_s = sp.vstack(to_stack_A).tocsr()
             B_s = sp.vstack(to_stack_B).tocsr()
+            if profile_time:
+                print("cloest point elapsed time: " + str(time.time()-cloest_point_start))
+
+            if profile_time:
+                solver_start = time.time()
             X = spsolve(A_s, B_s)
+            if profile_time:
+                print("linear solver elapsed time: " + str(time.time()-solver_start))
 
             # deform template
             v_i_prev = v_i
